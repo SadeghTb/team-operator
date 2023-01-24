@@ -35,10 +35,6 @@ spec:
           spec:
             description: TeamSpec defines the desired state of Team
             properties:
-              name:
-                description: Foo is an example field of Team. Edit team_types.go to
-                  remove/update
-                type: string
               namespaces:
                 description: Foo is an example field of Team. Edit team_types.go to
                   remove/update

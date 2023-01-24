@@ -29,8 +29,6 @@ type TeamSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Team. Edit team_types.go to remove/update
-	TeamName string `json:"name,omitempty"`
-	// Foo is an example field of Team. Edit team_types.go to remove/update
 	TeamAdmin string `json:"teamAdmin,omitempty"`
 	// Foo is an example field of Team. Edit team_types.go to remove/update
 	Namespaces []string `json:"namespaces,omitempty"`

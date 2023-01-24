@@ -70,7 +70,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: controller:latest
+        image: anishamidi/team-operator:test
         name: manager
         securityContext:
           allowPrivilegeEscalation: false

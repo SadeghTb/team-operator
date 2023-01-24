@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -69,11 +70,8 @@ func (r *TeamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		log.Error(err, "Failed to get team")
 		return ctrl.Result{}, err
 	}
-	//checkAdminAcess
-	//check if it has the lables
-	//check if it has
-	//ki object ha ro gharare besaze har teamadmini miad teame khodesho misaze?
-	teamName := req.Name
+
+	teamName := team.GetName()
 
 	for _, ns := range team.Spec.Namespaces {
 		namespace := &corev1.Namespace{}
@@ -81,6 +79,10 @@ func (r *TeamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if err != nil {
 			log.Error(err, "Failed to get namespace")
 			return ctrl.Result{}, err
+		}
+		//if a namespace currently have a namespace
+		if val, ok := namespace.Labels["snappcloud.io/team"]; ok {
+			fmt.Println(val)
 		}
 		namespace.Labels["snappcloud.io/team"] = teamName
 		namespace.Labels["snappcloud.io/datasource"] = "true"
@@ -92,11 +94,56 @@ func (r *TeamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 		}
 
-		// for i, lb := range namespace.Labels {
-		// 	fmt.Println(i, lb)
-		// }
-
 	}
+	fmt.Println("-------------------------")
+
+	// kubeconfig := fmt.Sprintf("%s/.kube/config-anis", os.Getenv("HOME"))
+	// config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	// if err != nil {
+	// 	panic(err.Error())
+	// }
+
+	// // config.Impersonate = rest.ImpersonationConfig{
+	// // 	UserName: "system:serviceaccount:default:test",
+	// // }
+
+	// clientset, err := kubernetes.NewForConfig(config)
+	// if err != nil {
+	// 	panic(err.Error())
+	// }
+	// for _, ns := range team.Spec.Namespaces {
+	// 	namespace := &corev1.Namespace{}
+	// 	err := r.Client.Get(ctx, types.NamespacedName{Name: ns}, namespace)
+	// 	if err != nil {
+	// 		log.Error(err, "Failed to get namespace")
+	// 		return ctrl.Result{}, err
+	// 	}
+	// 	action := authv1.ResourceAttributes{
+	// 		Namespace: namespace.Name,
+	// 		Verb:      "create",
+	// 		Resource:  "rolebinding",
+	// 	}
+	// 	selfCheck := authv1.SelfSubjectAccessReview{
+	// 		Spec: authv1.SelfSubjectAccessReviewSpec{
+	// 			ResourceAttributes: &action,
+	// 		},
+	// 	}
+	// 	fmt.Println(selfCheck)
+	// 	resp, err := clientset.AuthorizationV1().
+	// 		SelfSubjectAccessReviews().
+	// 		Create(context.TODO(), &selfCheck, metav1.CreateOptions{})
+
+	// 	if err != nil {
+	// 		panic(err.Error())
+	// 	}
+
+	// 	if resp.Status.Allowed {
+	// 		fmt.Println("allowed")
+	// 	} else {
+	// 		fmt.Println("denied", namespace.Name)
+	// 	}
+
+	//}
 
 	return ctrl.Result{}, nil
 }
