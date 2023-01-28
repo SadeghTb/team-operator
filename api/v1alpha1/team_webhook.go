@@ -19,13 +19,12 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	"os"
 
 	authv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -50,9 +49,7 @@ var _ webhook.Validator = &Team{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *Team) ValidateCreate() error {
 	teamlog.Info("validate create", "name", r.Name)
-	fmt.Println("hello")
-
-	// TODO(user): fill in your validation logic upon object creation.
+	fmt.Println("hello") // TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
 
@@ -60,7 +57,49 @@ func (r *Team) ValidateCreate() error {
 func (r *Team) ValidateUpdate(old runtime.Object) error {
 
 	teamlog.Info("validate update", "name", r.Name)
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		teamlog.Error(err, "can not get incluster config")
+	}
+	// User "system:serviceaccount:team-operator-system:team-operator-controller-manager"
+	//cannot impersonate resource "serviceaccounts" in API group "" in the namespace "default"
+	config.Impersonate = rest.ImpersonationConfig{
+		UserName: r.Spec.TeamAdmin,
+	}
 
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		teamlog.Error(err, "can not create clientset")
+	}
+
+	for _, ns := range r.Spec.Namespaces {
+
+		action := authv1.ResourceAttributes{
+			Namespace: ns,
+			Verb:      "create",
+			Resource:  "rolebinding",
+		}
+
+		selfCheck := authv1.SelfSubjectAccessReview{
+			Spec: authv1.SelfSubjectAccessReviewSpec{
+				ResourceAttributes: &action,
+			},
+		}
+
+		resp, err := clientset.AuthorizationV1().
+			SelfSubjectAccessReviews().
+			Create(context.TODO(), &selfCheck, metav1.CreateOptions{})
+
+		if err != nil {
+			teamlog.Error(err, "can not create rolebingdin")
+		}
+
+		if resp.Status.Allowed {
+			fmt.Println(r.Spec.TeamAdmin, "allowed")
+		} else {
+			fmt.Println(r.Spec.TeamAdmin, "denied")
+		}
+	}
 	return nil
 }
 
@@ -69,43 +108,4 @@ func (r *Team) ValidateDelete() error {
 	teamlog.Info("validate delete", "name", r.Name)
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
-}
-
-func (r *Team) ValidateUserAccess(ctx context.Context) error {
-
-	kubeconfig := fmt.Sprintf("%s/.kube/config-anis", os.Getenv("HOME"))
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		panic(err.Error())
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err.Error())
-	}
-	action := authv1.ResourceAttributes{
-		Namespace: "snappcloud-operators-seldon",
-		Verb:      "create",
-		Resource:  "rolebinding",
-	}
-	selfCheck := authv1.SelfSubjectAccessReview{
-		Spec: authv1.SelfSubjectAccessReviewSpec{
-			ResourceAttributes: &action,
-		},
-	}
-
-	resp, err := clientset.AuthorizationV1().
-		SelfSubjectAccessReviews().
-		Create(context.TODO(), &selfCheck, metav1.CreateOptions{})
-
-	if err != nil {
-		panic(err.Error())
-	}
-
-	if resp.Status.Allowed {
-		fmt.Println("allowed")
-	} else {
-		fmt.Println("denied")
-	}
-	return nil
-
 }

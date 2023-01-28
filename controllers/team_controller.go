@@ -20,15 +20,15 @@ import (
 	"context"
 	"fmt"
 
+	teamv1alpha1 "github.com/AnisHamidi/team-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	teamv1alpha1 "github.com/AnisHamidi/team-operator/api/v1alpha1"
 )
 
 // TeamReconciler reconciles a Team object
@@ -53,20 +53,14 @@ type TeamReconciler struct {
 func (r *TeamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	// Fetch the Memcached instance
-	// The purpose is check if the Custom Resource for the Kind Memcached
-	// is applied on the cluster if not we return nil to stop the reconciliation
 	team := &teamv1alpha1.Team{}
 
 	err := r.Client.Get(ctx, req.NamespacedName, team)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// If the custom resource is not found then, it usually means that it was deleted or not created
-			// In this way, we will stop the reconciliation
 			log.Info("team resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
-		// Error reading the object - requeue the request.
 		log.Error(err, "Failed to get team")
 		return ctrl.Result{}, err
 	}
@@ -95,55 +89,6 @@ func (r *TeamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 
 	}
-	fmt.Println("-------------------------")
-
-	// kubeconfig := fmt.Sprintf("%s/.kube/config-anis", os.Getenv("HOME"))
-	// config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
-
-	// // config.Impersonate = rest.ImpersonationConfig{
-	// // 	UserName: "system:serviceaccount:default:test",
-	// // }
-
-	// clientset, err := kubernetes.NewForConfig(config)
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
-	// for _, ns := range team.Spec.Namespaces {
-	// 	namespace := &corev1.Namespace{}
-	// 	err := r.Client.Get(ctx, types.NamespacedName{Name: ns}, namespace)
-	// 	if err != nil {
-	// 		log.Error(err, "Failed to get namespace")
-	// 		return ctrl.Result{}, err
-	// 	}
-	// 	action := authv1.ResourceAttributes{
-	// 		Namespace: namespace.Name,
-	// 		Verb:      "create",
-	// 		Resource:  "rolebinding",
-	// 	}
-	// 	selfCheck := authv1.SelfSubjectAccessReview{
-	// 		Spec: authv1.SelfSubjectAccessReviewSpec{
-	// 			ResourceAttributes: &action,
-	// 		},
-	// 	}
-	// 	fmt.Println(selfCheck)
-	// 	resp, err := clientset.AuthorizationV1().
-	// 		SelfSubjectAccessReviews().
-	// 		Create(context.TODO(), &selfCheck, metav1.CreateOptions{})
-
-	// 	if err != nil {
-	// 		panic(err.Error())
-	// 	}
-
-	// 	if resp.Status.Allowed {
-	// 		fmt.Println("allowed")
-	// 	} else {
-	// 		fmt.Println("denied", namespace.Name)
-	// 	}
-
-	//}
 
 	return ctrl.Result{}, nil
 }
