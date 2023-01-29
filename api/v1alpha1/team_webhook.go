@@ -66,15 +66,12 @@ func (r *Team) ValidateUpdate(old runtime.Object) error {
 	config.Impersonate = rest.ImpersonationConfig{
 		UserName: r.Spec.TeamAdmin,
 	}
-	fmt.Println(config.Impersonate)
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		teamlog.Error(err, "can not create clientset")
 	}
 
 	for _, ns := range r.Spec.Namespaces {
-		fmt.Println(ns)
-
 		action := authv1.ResourceAttributes{
 			Namespace: ns,
 			Verb:      "create",
