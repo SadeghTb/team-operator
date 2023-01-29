@@ -93,7 +93,7 @@ func (r *Team) ValidateUpdate(old runtime.Object) error {
 		if err != nil {
 			teamlog.Error(err, "Can not create rolebingdin")
 		}
-
+		//test
 		if resp.Status.Allowed {
 			fmt.Println("Allowed")
 		} else {
