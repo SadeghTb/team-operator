@@ -91,14 +91,14 @@ func (r *Team) ValidateUpdate(old runtime.Object) error {
 			Create(context.TODO(), &selfCheck, metav1.CreateOptions{})
 
 		if err != nil {
-			teamlog.Error(err, "can not create rolebingdin")
+			teamlog.Error(err, "Can not create rolebingdin")
 		}
 
 		if resp.Status.Allowed {
-			fmt.Println("allowed")
+			fmt.Println("Allowed")
 		} else {
-			fmt.Println("denied")
-			return errors.New("you are not allowd to add this namespace")
+			fmt.Println("Denied")
+			return errors.New("you are not allowed to add this namespace")
 		}
 	}
 	return nil
