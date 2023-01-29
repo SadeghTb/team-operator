@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	authv1 "k8s.io/api/authorization/v1"
@@ -61,8 +62,6 @@ func (r *Team) ValidateUpdate(old runtime.Object) error {
 	if err != nil {
 		teamlog.Error(err, "can not get incluster config")
 	}
-	// User "system:serviceaccount:team-operator-system:team-operator-controller-manager"
-	//cannot impersonate resource "serviceaccounts" in API group "" in the namespace "default"
 
 	config.Impersonate = rest.ImpersonationConfig{
 		UserName: r.Spec.TeamAdmin,
@@ -97,12 +96,12 @@ func (r *Team) ValidateUpdate(old runtime.Object) error {
 		if err != nil {
 			teamlog.Error(err, "can not create rolebingdin")
 		}
-		fmt.Println(resp)
 
 		if resp.Status.Allowed {
-			fmt.Println(r.Spec.TeamAdmin, "allowed")
+			fmt.Println("allowed")
 		} else {
-			fmt.Println(r.Spec.TeamAdmin, "denied")
+			fmt.Println("denied")
+			return errors.New("you are not allowd to add this namespace")
 		}
 	}
 	return nil
