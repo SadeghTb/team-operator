@@ -69,7 +69,7 @@ func (r *TeamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	for _, ns := range team.Spec.Namespaces {
 		//if a namespace got deleted
-		fmt.Println("in namspace loop")
+		fmt.Println("in namspace loopp")
 		namespace := &corev1.Namespace{}
 		err := r.Client.Get(ctx, types.NamespacedName{Name: ns}, namespace)
 		if err != nil {
