@@ -63,21 +63,25 @@ func (r *Team) ValidateUpdate(old runtime.Object) error {
 	}
 	// User "system:serviceaccount:team-operator-system:team-operator-controller-manager"
 	//cannot impersonate resource "serviceaccounts" in API group "" in the namespace "default"
+
 	config.Impersonate = rest.ImpersonationConfig{
 		UserName: r.Spec.TeamAdmin,
 	}
-
+	fmt.Println(config.Impersonate)
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		teamlog.Error(err, "can not create clientset")
 	}
 
 	for _, ns := range r.Spec.Namespaces {
+		fmt.Println(ns)
 
 		action := authv1.ResourceAttributes{
 			Namespace: ns,
 			Verb:      "create",
-			Resource:  "rolebinding",
+			Resource:  "rolebindings",
+			Group:     "rbac.authorization.k8s.io",
+			Version:   "v1",
 		}
 
 		selfCheck := authv1.SelfSubjectAccessReview{
@@ -93,6 +97,7 @@ func (r *Team) ValidateUpdate(old runtime.Object) error {
 		if err != nil {
 			teamlog.Error(err, "can not create rolebingdin")
 		}
+		fmt.Println(resp)
 
 		if resp.Status.Allowed {
 			fmt.Println(r.Spec.TeamAdmin, "allowed")
