@@ -35,6 +35,14 @@ spec:
           spec:
             description: TeamSpec defines the desired state of Team
             properties:
+              managementState:
+                description: ManagementState indicates whether and how the operator
+                  should manage the component. Indicator if the resource is 'Managed'
+                  or 'Unmanaged' by the operator.
+                enum:
+                - Managed
+                - Unmanaged
+                type: string
               namespaces:
                 description: Foo is an example field of Team. Edit team_types.go to
                   remove/update
@@ -45,6 +53,8 @@ spec:
                 description: Foo is an example field of Team. Edit team_types.go to
                   remove/update
                 type: string
+            required:
+            - managementState
             type: object
           status:
             description: TeamStatus defines the observed state of Team

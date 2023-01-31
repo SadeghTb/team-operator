@@ -47,17 +47,16 @@ func (r *Team) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 var _ webhook.Validator = &Team{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *Team) ValidateCreate() error {
 	teamlog.Info("validate create", "name", r.Name)
 	fmt.Println("hello") // TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *Team) ValidateUpdate(old runtime.Object) error {
 
 	teamlog.Info("validate update", "name", r.Name)
+
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		teamlog.Error(err, "can not get incluster config")
@@ -72,6 +71,26 @@ func (r *Team) ValidateUpdate(old runtime.Object) error {
 	}
 
 	for _, ns := range r.Spec.Namespaces {
+		//check if namespace does not exist or has been deleted
+		teamns, err := clientset.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})
+		if err != nil {
+			errorresp := "namespace " + ns + " doese not exist"
+			return errors.New(errorresp)
+		}
+		fmt.Println(teamns.Name)
+		//check if namespace already has been added to another team
+		if val, ok := teamns.Labels["snappcloud.io/team"]; ok {
+			if teamns.Labels["snappcloud.io/team"] != r.Name {
+				errresp := "namespace " + ns + " already have team label " + val
+				return errors.New(errresp)
+			}
+
+		}
+		if err != nil {
+			teamlog.Error(err, "can not get ns")
+		}
+
+		//Check If user has access to this namespace
 		action := authv1.ResourceAttributes{
 			Namespace: ns,
 			Verb:      "create",
@@ -80,15 +99,26 @@ func (r *Team) ValidateUpdate(old runtime.Object) error {
 			Version:   "v1",
 		}
 
-		selfCheck := authv1.SelfSubjectAccessReview{
-			Spec: authv1.SelfSubjectAccessReviewSpec{
+		check := authv1.LocalSubjectAccessReview{
+			Spec: authv1.SubjectAccessReviewSpec{
+				User:               r.Spec.TeamAdmin,
 				ResourceAttributes: &action,
 			},
 		}
 
 		resp, err := clientset.AuthorizationV1().
-			SelfSubjectAccessReviews().
-			Create(context.TODO(), &selfCheck, metav1.CreateOptions{})
+			LocalSubjectAccessReviews(ns).
+			Create(context.TODO(), &check, metav1.CreateOptions{})
+
+		// selfCheck := authv1.SelfSubjectAccessReview{
+		// 	Spec: authv1.SelfSubjectAccessReviewSpec{
+		// 		ResourceAttributes: &action,
+		// 	},
+		// }
+
+		// resp, err := clientset.AuthorizationV1().
+		// 	SelfSubjectAccessReviews().
+		// 	Create(context.TODO(), &selfCheck, metav1.CreateOptions{})
 
 		if err != nil {
 			teamlog.Error(err, "Can not create rolebingdin")
@@ -98,13 +128,12 @@ func (r *Team) ValidateUpdate(old runtime.Object) error {
 			fmt.Println("Allowed")
 		} else {
 			fmt.Println("Denied")
-			return errors.New("you are not allowed to add this namespace")
+			return errors.New("you are not allowed to add namespace " + ns)
 		}
 	}
 	return nil
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *Team) ValidateDelete() error {
 	teamlog.Info("validate delete", "name", r.Name)
 	// TODO(user): fill in your validation logic upon object deletion.

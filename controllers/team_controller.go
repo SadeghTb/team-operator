@@ -18,7 +18,7 @@ package controllers
 
 import (
 	"context"
-	"fmt"
+	"reflect"
 
 	teamv1alpha1 "github.com/AnisHamidi/team-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -52,6 +52,7 @@ type TeamReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
 func (r *TeamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
+	// check all namespaces that have same team label
 
 	team := &teamv1alpha1.Team{}
 
@@ -65,20 +66,44 @@ func (r *TeamReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	if team.Spec.ManagementState == "Unmanaged" {
+		return ctrl.Result{}, nil
+	}
+
 	teamName := team.GetName()
 
+	nsList := &corev1.NamespaceList{}
+	opts := []client.ListOption{
+		client.MatchingLabels{"snappcloud.io/team": teamName},
+	}
+	err = r.List(ctx, nsList, opts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	nsNames := getNamespaceNames(nsList)
+	//add all namespaces that have the lable, but aren't join any team
+	if !reflect.DeepEqual(nsNames, team.Spec.Namespaces) {
+		team.Spec.Namespaces = nsNames
+		if err := r.Update(ctx, team); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// adding team labels for each namespace in team spec
 	for _, ns := range team.Spec.Namespaces {
-		//if a namespace got deleted
-		fmt.Println("in namspace loopp")
 		namespace := &corev1.Namespace{}
+
+		//check and ignore if a namespace currently have a team lable
+		//ino ye test kon k baghie ro mire jelo ya na
+		if val, ok := namespace.Labels["snappcloud.io/team"]; ok {
+			log.Info("namespace already have team label", val)
+			continue
+		}
 		err := r.Client.Get(ctx, types.NamespacedName{Name: ns}, namespace)
 		if err != nil {
 			log.Error(err, "Failed to get namespace")
 			return ctrl.Result{}, err
-		}
-		//if a namespace currently have a namespace
-		if val, ok := namespace.Labels["snappcloud.io/team"]; ok {
-			fmt.Println(val)
 		}
 		namespace.Labels["snappcloud.io/team"] = teamName
 		namespace.Labels["snappcloud.io/datasource"] = "true"
@@ -100,4 +125,12 @@ func (r *TeamReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&teamv1alpha1.Team{}).
 		Complete(r)
+}
+
+func getNamespaceNames(n *corev1.NamespaceList) []string {
+	ns_listname := []string{}
+	for _, ns := range n.Items {
+		ns_listname = append(ns_listname, ns.Name)
+	}
+	return ns_listname
 }

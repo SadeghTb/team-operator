@@ -28,6 +28,10 @@ type TeamSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// ManagementState indicates whether and how the operator should manage the component.
+	// Indicator if the resource is 'Managed' or 'Unmanaged' by the operator.
+	ManagementState ManagementState `json:"managementState"`
+
 	// Foo is an example field of Team. Edit team_types.go to remove/update
 	TeamAdmin string `json:"teamAdmin,omitempty"`
 	// Foo is an example field of Team. Edit team_types.go to remove/update
@@ -61,6 +65,19 @@ type TeamList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Team `json:"items"`
 }
+
+// Managed means that the operator is actively managing its resources and trying to keep the component active.
+// It will only upgrade the component if it is safe to do so
+// Unmanaged means that the operator will not take any action related to the component
+//
+// +kubebuilder:validation:Enum:=Managed;Unmanaged
+
+type ManagementState string
+
+const (
+	ManagementStateManaged   ManagementState = "Managed"
+	ManagementStateUnmanaged ManagementState = "Unmanaged"
+)
 
 func init() {
 	SchemeBuilder.Register(&Team{}, &TeamList{})
